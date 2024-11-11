@@ -140,6 +140,9 @@ def draw(db: Session, league_id: int):
             ids.append(0)
 
     players = db.query(Player).filter(Player.player_id.in_(ids)).order_by(Player.rating.desc()).all()
+    if len(players) % league.n_groups > 0:
+        for i in range(league.n_groups - len(players) % league.n_groups):
+            players.append(Player(player_id=0, rating=0))
 
     n_iter = len(ids) // league.n_groups
     for i in range(n_iter):
@@ -147,8 +150,6 @@ def draw(db: Session, league_id: int):
         for j in range(league.n_groups):
             player = players[0]
             players.remove(player)
-            if player.player_id == 0:
-                continue
 
             group_name = random.choice(choices)
             choices.remove(group_name)
@@ -213,6 +214,11 @@ def complete_the_group_stage(db: Session, league_id: int):
             parse_by_place[1].append(g["player_id"])
         elif g["place"] == 3:
             parse_by_place[2].append(g["player_id"])
+
+    for i in parse_by_place:
+        if len(i) % league.n_groups != 0:
+            for j in range(league.n_groups - len(i) % league.n_groups):
+                i.append(0)
 
     # Создание плей-офф
     playoff_types = ["Золотой", "Серебрянный", "Бронзовый"]

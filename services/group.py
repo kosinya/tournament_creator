@@ -34,7 +34,7 @@ def get_all_groups(db: Session, l_id: int):
     query = text(f"""SELECT g.*, p.surname, p.name, p.patronymic
                      FROM groups g
                      JOIN players p ON g.player_id = p.player_id
-                     WHERE g.league_id = {l_id}
+                     WHERE g.league_id = {l_id} AND p.player_id != 0
                      ORDER BY g.group_name ASC;""")
     results = db.execute(query).fetchall()
 
