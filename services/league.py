@@ -133,10 +133,11 @@ def draw(db: Session, league_id: int):
     if league.players != "":
         ids = [int(i) for i in league.players.split(',')]
     else:
-        raise HTTPException(status_code=400, detail=f'The list of players is empty')
+        raise HTTPException(status_code=400, detail=f'Список игроков пуст!')
 
     if len(ids) % league.n_groups > 0:
-        raise HTTPException(status_code=400, detail=f'The number of players must be a multiple of 4')
+        for i in range(league.n_groups - len(ids) % league.n_groups):
+            ids.append(0)
 
     players = db.query(Player).filter(Player.player_id.in_(ids)).order_by(Player.rating.desc()).all()
 
@@ -144,11 +145,13 @@ def draw(db: Session, league_id: int):
     for i in range(n_iter):
         choices = LETTERS[0:league.n_groups]
         for j in range(league.n_groups):
-            group_name = random.choice(choices)
-            choices.remove(group_name)
-
             player = players[0]
             players.remove(player)
+            if player.player_id == 0:
+                continue
+
+            group_name = random.choice(choices)
+            choices.remove(group_name)
 
             data = group_dto.GroupCreate(
                 player_id=player.player_id,
@@ -170,6 +173,8 @@ def create_group_matches(db: Session, league_id: int, n_groups: int, groups: lis
     for i in range(n_groups):
         group = [g for g in groups if g.group_name == LETTERS[i]]
         for p1, p2 in itertools.combinations(group, 2):
+            if p1.player_id == 0 or p2.player_id == 0:
+                continue
             match = match_dto.MatchCreate(
                 player1_id=p1.player_id,
                 player2_id=p2.player_id,
