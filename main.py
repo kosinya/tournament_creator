@@ -1,6 +1,6 @@
 import uvicorn
 from fastapi import FastAPI
-from  fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.cors import CORSMiddleware
 from database import Base, engine
 from routers import tournament, player, department, league, match, group, playoff
 

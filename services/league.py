@@ -3,6 +3,15 @@ import random
 from fastapi import HTTPException
 import itertools
 
+from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.lib.units import inch
+
+from sqlalchemy import text
+
 from database import Session
 from models.league import League
 from models.player import Player
@@ -15,9 +24,11 @@ from . import group as group_service
 from . import match as match_service
 from . import playoff as playoff_service
 
+
 LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
+pdfmetrics.registerFont(TTFont('DejaVu', r'C:\Users\KoSin\Documents\Projects\tournament_creator\services\DejaVuSans.ttf'))
 
 # Получить список всех лиг турнира
 def get_all_leagues(db: Session, t_id: int):
@@ -252,7 +263,7 @@ def complete_the_group_stage(db: Session, league_id: int):
             new_match.player2_id = parse_by_place[i][j+3]
             match_service.create_match(db, new_match)
 
-        n_matches = {'Финал': 1, '1/2': 2, '1/4': 4, '1/8': 8}
+        n_matches = {'Финал': 1, '3 место': 1, '1/2': 2, '1/4': 4, '1/8': 8}
         for key, val in n_matches.items():
             if key == playoffs[i].current_stage:
                 break
@@ -285,3 +296,73 @@ def playoff_stage(player_list):
         return "1/6"
     else:
         return "Unknown stage"
+
+
+def get_pdf_result(db: Session, league_id: int):
+    playoffs = playoff_service.get_all_playoffs(db, league_id)
+
+    query = text(f"""SELECT m.*, p1.surname AS 'player1_surname', p1.name AS 'player1_name',
+                         p2.surname AS 'player2_surname', p2.name AS 'player2_name'
+                         FROM matches m
+                         JOIN players p1 ON m.player1_id = p1.player_id
+                         JOIN players p2 ON m.player2_id = p2.player_id
+                         WHERE m.league_id = {league_id} AND m.playoff_id = {playoffs[0].playoff_id} AND m.type IN ('Финал', '3 место');
+        """)
+
+    results = db.execute(query).fetchall()
+    winners = {}
+    for r in results:
+        if r.type == "Финал":
+            if r.player1_id == r.winner_id:
+                winners['first'] = r.player1_surname + r.player1_name
+                winners['second'] = r.player2_surname + r.player2_name
+            else:
+                winners['first'] = r.player2_surname + r.player2_name
+                winners['second'] = r.player1_surname + r.player1_name
+        else:
+            if r.player1_id == r.winner_id:
+                winners['third'] = r.player1_surname + r.player1_name
+            else:
+                winners['third'] = r.player2_surname + r.player2_name
+
+    winner = "Иван Иванов"
+    second_place = "Петр Петров"
+    third_place = "Сергей Сергеев"
+    bronze_color = colors.Color(0.8, 0.5, 0.2)
+
+    c = canvas.Canvas(f"league{league_id}_results.pdf", pagesize=letter)
+    width, height = letter
+
+    c.setFillColor(colors.white)
+    c.rect(0, 0, width, height, fill=1)
+
+    # Заголовок
+    c.setFont("DejaVu", 24)
+    c.setFillColor(colors.black)
+    c.drawCentredString(width / 2, height - 100, "Результаты соревнования")
+
+    # Отступы
+    margin = 100
+    line_height = 30
+
+    # 1 место
+    c.setFont("DejaVu", 20)
+    c.drawString(margin, height - 150, f"1. Победитель: {winner}")
+
+    # 2 место
+    c.setFont("DejaVu", 20)
+    c.drawString(margin, height - 180, f"2. Призер 2 места: {second_place}")
+
+    # 3 место
+    c.setFont("DejaVu", 20)
+    c.drawString(margin, height - 210, f"3. Призер 3 места: {third_place}")
+
+    # Подпись
+    c.setFont("DejaVu", 16)
+    c.drawCentredString(width / 2, height - 300, "Спасибо за участие!")
+
+    # Сохранение PDF
+    c.save()
+
+
+    return 0

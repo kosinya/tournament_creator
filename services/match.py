@@ -76,6 +76,8 @@ def get_matches_by_playoff(db: Session, playoff_id: int):
     data = []
     if results:
         for result in results:
+            if result[3] == '3 место':
+                break
             data.append({
                 "match_id": result[0],
                 "player1_id": result[1],

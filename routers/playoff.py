@@ -21,3 +21,9 @@ async def get_playoffs(db: Session = Depends(get_connection), l_id: str = None):
 @router.post("/next_stage", tags=["playoff"])
 async def next_stage(db: Session = Depends(get_connection), p_id: str = None):
     return playoff.next_stage(db, int(p_id))
+
+
+@router.get("/get_third_place_mathc", tags=["playoff"])
+async def get_third_place_mathc(db: Session = Depends(get_connection), p_id: str = None):
+    return playoff.get_third_match(db, int(p_id))
+

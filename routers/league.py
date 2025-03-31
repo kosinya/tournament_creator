@@ -42,3 +42,8 @@ async def draw(db: Session = Depends(get_connection), l_id: str = None):
 @router.post('/{l_id}/create_playoff', tags=['league'])
 async def create_playoff(db: Session = Depends(get_connection), l_id: str = None):
     return league.complete_the_group_stage(db, int(l_id))
+
+
+@router.get('/get_results', tags=['league'])
+async def get_results(db: Session = Depends(get_connection), l_id: str = None):
+    return league.get_pdf_result(db, int(l_id))
