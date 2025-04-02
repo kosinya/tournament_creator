@@ -28,7 +28,7 @@ from . import playoff as playoff_service
 LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
 
-pdfmetrics.registerFont(TTFont('DejaVu', r'C:\Users\KoSin\Documents\Projects\tournament_creator\services\DejaVuSans.ttf'))
+pdfmetrics.registerFont(TTFont('DejaVu', r'C:\Users\admin\Documents\GitHub\tournament_creator\services\DejaVuSans.ttf'))
 
 # Получить список всех лиг турнира
 def get_all_leagues(db: Session, t_id: int):
