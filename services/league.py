@@ -306,29 +306,36 @@ def get_pdf_result(db: Session, league_id: int):
                          FROM matches m
                          JOIN players p1 ON m.player1_id = p1.player_id
                          JOIN players p2 ON m.player2_id = p2.player_id
-                         WHERE m.league_id = {league_id} AND m.playoff_id = {playoffs[0].playoff_id} AND m.type IN ('Финал', '3 место');
+                         WHERE m.league_id = {league_id};
         """)
 
     results = db.execute(query).fetchall()
     winners = {}
+    final = []
+    semifinals = []
+    group_matches = {"A": [], "B": [], "C": [], "D": []}
+
     for r in results:
+        if r.type == "Групповой":
+            group_matches[r.group_name].append(r)
         if r.type == "Финал":
+            final.append(r)
             if r.player1_id == r.winner_id:
                 winners['first'] = r.player1_surname + r.player1_name
                 winners['second'] = r.player2_surname + r.player2_name
             else:
                 winners['first'] = r.player2_surname + r.player2_name
                 winners['second'] = r.player1_surname + r.player1_name
-        else:
+        if r.type == "3 место":
+            final.append(r)
             if r.player1_id == r.winner_id:
                 winners['third'] = r.player1_surname + r.player1_name
             else:
                 winners['third'] = r.player2_surname + r.player2_name
+        if r.type == "1/2":
+            semifinals.append(r)
 
     winner = "Иван Иванов"
-    second_place = "Петр Петров"
-    third_place = "Сергей Сергеев"
-    bronze_color = colors.Color(0.8, 0.5, 0.2)
 
     c = canvas.Canvas(f"league{league_id}_results.pdf", pagesize=letter)
     width, height = letter
@@ -339,30 +346,49 @@ def get_pdf_result(db: Session, league_id: int):
     # Заголовок
     c.setFont("DejaVu", 24)
     c.setFillColor(colors.black)
-    c.drawCentredString(width / 2, height - 100, "Результаты соревнования")
 
     # Отступы
     margin = 100
     line_height = 30
 
     # 1 место
-    c.setFont("DejaVu", 20)
-    c.drawString(margin, height - 150, f"1. Победитель: {winner}")
+    # Заголовок
+    c.setFont("DejaVu", 24)
+    c.drawString(100, height - 50, "Результаты соревнования")
 
-    # 2 место
-    c.setFont("DejaVu", 20)
-    c.drawString(margin, height - 180, f"2. Призер 2 места: {second_place}")
-
-    # 3 место
-    c.setFont("DejaVu", 20)
-    c.drawString(margin, height - 210, f"3. Призер 3 места: {third_place}")
-
-    # Подпись
+    # Победители и призеры
     c.setFont("DejaVu", 16)
-    c.drawCentredString(width / 2, height - 300, "Спасибо за участие!")
+    c.drawString(100, height - 100, "Победители и призеры:")
+    c.setFont("DejaVu", 14)
+    c.drawString(120, height - 130, f"1. {winners['first']}")
+    c.drawString(120, height - 150, f"2. {winners['second']}")
+    c.drawString(120, height - 170, f"3. {winners['third']}")
+
+    x = 240
+    # Полуфиналы
+    c.setFont("DejaVu", 16)
+    c.drawString(100, height - 210, "Полуфиналы:")
+    for i in semifinals:
+        c.setFont("DejaVu", 14)
+        c.drawString(120, height - x, f"{i.player1_surname} {i.score} {i.player2_surname}")
+        x += 20
+
+    x += 30
+    # Групповой этап
+    c.setFont("DejaVu", 16)
+    c.drawString(100, height - x, "Матчи группового этапа:")
+    c.setFont("DejaVu", 14)
+    for key, val in group_matches.items():
+        x += 20
+        c.drawString(100, height - x, f"Матчи группы {key}:")
+        x += 20
+        for j in val:
+            c.drawString(120, height - x, f"{j.player1_surname} {j.score} {j.player2_surname}")
+
 
     # Сохранение PDF
     c.save()
 
-
+    print(semifinals)
+    print(group_matches)
     return 0
